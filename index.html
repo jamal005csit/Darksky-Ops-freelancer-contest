@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Darksky Ops — Covert-grade network security. Penetration testing, infrastructure hardening, and classified-level operations for organizations that cannot afford exposure." />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Darksky Ops</title>
+
+  <!-- Preconnect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════════ */
+    :root {
+      --void:       #050507;
+      --deep:       #0a0a0f;
+      --surface:    #0f0f16;
+      --layer:      #16161f;
+      --border:     rgba(255,255,255,0.06);
+      --border-mid: rgba(255,255,255,0.12);
+
+      --ink:        #e8e8f0;
+      --ink-dim:    #7a7a90;
+      --ink-ghost:  #3a3a50;
+
+      --signal:     #4af0b0;       /* single accent — cold teal */
+      --signal-dim: rgba(74,240,176,0.12);
+      --signal-glow:rgba(74,240,176,0.25);
+
+      --f-display: 'Syne', sans-serif;
+      --f-mono:    'DM Mono', monospace;
+
+      --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in:   cubic-bezier(0.7, 0, 0.84, 0);
+    }
+
+    /* ═══════════════════════════════════════════
+       RESET + BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: var(--void);
+      color: var(--ink);
+      font-family: var(--f-mono);
+      font-weight: 300;
+      line-height: 1.7;
+      overflow-x: hidden;
+      cursor: none; /* custom cursor */
+    }
+
+    ::selection {
+      background: var(--signal);
+      color: var(--void);
+    }
+
+    /* ═══════════════════════════════════════════
+       CUSTOM CURSOR
+    ═══════════════════════════════════════════ */
+    #cursor {
+      position: fixed;
+      top: 0; left: 0;
+      width: 10px; height: 10px;
+      background: var(--signal);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s, opacity 0.2s;
+      mix-blend-mode: screen;
+    }
+    #cursor-ring {
+      position: fixed;
+      top: 0; left: 0;
+      width: 32px; height: 32px;
+      border: 1px solid rgba(74,240,176,0.4);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: transform 0.18s var(--ease-out), width 0.3s, height 0.3s, opacity 0.2s;
+    }
+    body:not(:hover) #cursor,
+    body:not(:hover) #cursor-ring { opacity: 0; }
+
+    a, button { cursor: none; }
+
+    /* ═══════════════════════════════════════════
+       NOISE TEXTURE OVERLAY
+    ═══════════════════════════════════════════ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* ═══════════════════════════════════════════
+       HORIZONTAL SCAN LINE (purely CSS)
+    ═══════════════════════════════════════════ */
+    body::after {
+      content: '';
+      position: fixed;
+      left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--signal), transparent);
+      opacity: 0;
+      z-index: 999;
+      animation: scan 8s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes scan {
+      0%   { top: -2px; opacity: 0; }
+      5%   { opacity: 0.35; }
+      95%  { opacity: 0.15; }
+      100% { top: 100vh; opacity: 0; }
+    }
+
+    /* ═══════════════════════════════════════════
+       LAYOUT UTILS
+    ═══════════════════════════════════════════ */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+    .container--wide {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    /* ═══════════════════════════════════════════
+       HEADER / BRAND BAR
+    ═══════════════════════════════════════════ */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.4s, background 0.4s;
+    }
+    header.scrolled {
+      background: rgba(5,5,7,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom-color: var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--ink);
+    }
+    .brand__logo {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+    }
+    .brand__name {
+      font-family: var(--f-display);
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .header-tag {
+      font-size: 0.65rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-dim);
+    }
+
+    /* ═══════════════════════════════════════════
+       HERO SECTION
+    ═══════════════════════════════════════════ */
+    #hero {
+      position: relative;
+      min-height: 100svh;
+      display: flex;
+      align-items: center;
+      padding: 8rem 0 6rem;
+      overflow: hidden;
+    }
+
+    /* Radial depth gradient */
+    #hero::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 900px; height: 900px;
+      transform: translate(-50%, -55%);
+      background: radial-gradient(circle, rgba(74,240,176,0.04) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Grid lines */
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 30%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 30%, transparent 100%);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--signal);
+      margin-bottom: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 0.9s var(--ease-out) 0.3s forwards;
+    }
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px; height: 1px;
+      background: var(--signal);
+    }
+
+    .hero-headline {
+      font-family: var(--f-display);
+      font-weight: 800;
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      line-height: 1.0;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      max-width: 700px;
+      opacity: 0;
+      animation: fadeUp 1s var(--ease-out) 0.5s forwards;
+    }
+    .hero-headline em {
+      font-style: normal;
+      color: var(--signal);
+    }
+
+    .hero-subtext {
+      margin-top: 2rem;
+      max-width: 520px;
+      font-size: 0.9rem;
+      color: var(--ink-dim);
+      line-height: 1.85;
+      opacity: 0;
+      animation: fadeUp 1s var(--ease-out) 0.7s forwards;
+    }
+
+    .hero-cta {
+      margin-top: 3rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 1s var(--ease-out) 0.9s forwards;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--signal);
+      color: var(--void);
+      font-family: var(--f-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.85rem 2rem;
+      border: none;
+      transition: box-shadow 0.3s, transform 0.25s var(--ease-out), background 0.3s;
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 40px var(--signal-glow);
+      transform: translateY(-2px);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: transparent;
+      color: var(--ink-dim);
+      font-family: var(--f-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.85rem 0;
+      border: none;
+      border-bottom: 1px solid var(--ink-ghost);
+      transition: color 0.25s, border-color 0.25s;
+    }
+    .btn-ghost:hover {
+      color: var(--ink);
+      border-bottom-color: var(--ink-dim);
+    }
+
+    .hero-status {
+      position: absolute;
+      bottom: 3rem;
+      right: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.65rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+    }
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--signal);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--signal-glow); }
+      50%       { opacity: 0.6; box-shadow: 0 0 0 6px transparent; }
+    }
+
+    /* ═══════════════════════════════════════════
+       SECTION STRUCTURE
+    ═══════════════════════════════════════════ */
+    section {
+      position: relative;
+      padding: 7rem 0;
+    }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--signal);
+      margin-bottom: 3rem;
+    }
+    .section-label::before {
+      content: '';
+      display: block;
+      width: 20px; height: 1px;
+      background: var(--signal);
+    }
+
+    /* ═══════════════════════════════════════════
+       DIVIDER
+    ═══════════════════════════════════════════ */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-mid), transparent);
+    }
+
+    /* ═══════════════════════════════════════════
+       MISSION SECTION
+    ═══════════════════════════════════════════ */
+    #mission {
+      background: var(--deep);
+    }
+
+    .mission-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: start;
+    }
+
+    .mission-statement {
+      font-family: var(--f-display);
+      font-weight: 700;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      line-height: 1.2;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+    .mission-statement em {
+      font-style: normal;
+      color: var(--signal);
+    }
+
+    .mission-principles {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    .mission-principles li {
+      border-top: 1px solid var(--border);
+      padding-top: 1.5rem;
+    }
+    .principle-title {
+      font-family: var(--f-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--signal);
+      margin-bottom: 0.5rem;
+    }
+    .principle-body {
+      font-size: 0.85rem;
+      color: var(--ink-dim);
+      line-height: 1.75;
+    }
+
+    /* ═══════════════════════════════════════════
+       SERVICES SECTION
+    ═══════════════════════════════════════════ */
+    #services {
+      background: var(--surface);
+    }
+
+    .services-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 4rem;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .services-title {
+      font-family: var(--f-display);
+      font-weight: 700;
+      font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+    }
+    .services-note {
+      font-size: 0.78rem;
+      color: var(--ink-ghost);
+      max-width: 260px;
+      line-height: 1.7;
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .service-card {
+      background: var(--surface);
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.35s;
+    }
+    .service-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--signal);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s var(--ease-out);
+    }
+    .service-card:hover {
+      background: var(--layer);
+    }
+    .service-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .service-index {
+      font-size: 0.6rem;
+      letter-spacing: 0.22em;
+      color: var(--ink-ghost);
+      margin-bottom: 1.5rem;
+    }
+    .service-icon {
+      width: 40px; height: 40px;
+      margin-bottom: 1.5rem;
+      color: var(--signal);
+      opacity: 0.8;
+    }
+    .service-name {
+      font-family: var(--f-display);
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+      margin-bottom: 1rem;
+    }
+    .service-desc {
+      font-size: 0.82rem;
+      color: var(--ink-dim);
+      line-height: 1.8;
+    }
+    .service-tags {
+      margin-top: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .tag {
+      font-size: 0.6rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+      border: 1px solid var(--border);
+      padding: 0.3rem 0.65rem;
+    }
+
+    /* ═══════════════════════════════════════════
+       CLEARANCE BAR
+    ═══════════════════════════════════════════ */
+    .clearance-bar {
+      background: var(--layer);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 3rem 0;
+      overflow: hidden;
+    }
+    .clearance-inner {
+      display: flex;
+      gap: 5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .clearance-stat {
+      flex: 0 0 auto;
+    }
+    .clearance-number {
+      font-family: var(--f-display);
+      font-weight: 800;
+      font-size: 2.6rem;
+      color: var(--ink);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .clearance-number span {
+      color: var(--signal);
+    }
+    .clearance-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+      margin-top: 0.35rem;
+    }
+    .clearance-divider {
+      width: 1px;
+      height: 50px;
+      background: var(--border-mid);
+      flex-shrink: 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       CONTACT SECTION
+    ═══════════════════════════════════════════ */
+    #contact {
+      background: var(--deep);
+      text-align: center;
+      padding: 9rem 0;
+    }
+
+    .contact-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.65rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--signal);
+      margin-bottom: 2rem;
+    }
+
+    .contact-headline {
+      font-family: var(--f-display);
+      font-weight: 800;
+      font-size: clamp(2rem, 5vw, 3.8rem);
+      letter-spacing: -0.025em;
+      line-height: 1.05;
+      color: var(--ink);
+      max-width: 640px;
+      margin: 0 auto 1.5rem;
+    }
+    .contact-sub {
+      font-size: 0.85rem;
+      color: var(--ink-dim);
+      max-width: 400px;
+      margin: 0 auto 3.5rem;
+      line-height: 1.85;
+    }
+
+    .contact-email {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      font-family: var(--f-mono);
+      font-size: 0.95rem;
+      letter-spacing: 0.06em;
+      color: var(--signal);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      padding-bottom: 2px;
+      transition: border-color 0.3s, text-shadow 0.3s;
+    }
+    .contact-email:hover {
+      border-bottom-color: var(--signal);
+      text-shadow: 0 0 20px var(--signal-glow);
+    }
+
+    .contact-protocol {
+      margin-top: 4rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 1rem 2rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .protocol-text {
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-ghost);
+    }
+    .protocol-icon {
+      width: 16px; height: 16px;
+      color: var(--signal);
+      opacity: 0.7;
+    }
+
+    /* ═══════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════ */
+    footer {
+      background: var(--void);
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .footer-brand svg {
+      width: 24px; height: 24px;
+    }
+    .footer-brand-name {
+      font-family: var(--f-display);
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink-dim);
+    }
+    .footer-copy {
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      color: var(--ink-ghost);
+    }
+    .footer-legal {
+      font-size: 0.62rem;
+      letter-spacing: 0.14em;
+      color: var(--ink-ghost);
+      text-align: right;
+    }
+
+    /* ═══════════════════════════════════════════
+       REVEAL ANIMATION
+    ═══════════════════════════════════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal[data-delay="1"] { transition-delay: 0.1s; }
+    .reveal[data-delay="2"] { transition-delay: 0.2s; }
+    .reveal[data-delay="3"] { transition-delay: 0.3s; }
+    .reveal[data-delay="4"] { transition-delay: 0.4s; }
+    .reveal[data-delay="5"] { transition-delay: 0.5s; }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════ */
+    @media (max-width: 800px) {
+      .mission-layout {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+      }
+      .services-grid {
+        grid-template-columns: 1fr;
+      }
+      .clearance-inner {
+        gap: 2.5rem;
+      }
+      .clearance-divider { display: none; }
+      .services-header { flex-direction: column; align-items: flex-start; }
+      footer { flex-direction: column; text-align: center; }
+      .footer-legal { text-align: center; }
+      #cursor, #cursor-ring { display: none; }
+      body { cursor: auto; }
+      a, button { cursor: pointer; }
+    }
+
+    @media (max-width: 520px) {
+      .hero-cta { flex-direction: column; align-items: flex-start; }
+      .contact-headline { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Custom Cursor -->
+  <div id="cursor" role="presentation" aria-hidden="true"></div>
+  <div id="cursor-ring" role="presentation" aria-hidden="true"></div>
+
+  <!-- ══════════════════════════════════
+       HEADER
+  ══════════════════════════════════ -->
+  <header id="site-header" role="banner">
+    <a href="#hero" class="brand" aria-label="Darksky Ops home">
+      <!-- INLINE LOGO SVG -->
+      <svg class="brand__logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- Outer hexagon -->
+        <path d="M24 4L42 14V34L24 44L6 34V14L24 4Z" stroke="#4af0b0" stroke-width="1" fill="none" opacity="0.4"/>
+        <!-- Inner hexagon -->
+        <path d="M24 12L36 19V33L24 40L12 33V19L24 12Z" stroke="#4af0b0" stroke-width="1" fill="none" opacity="0.7"/>
+        <!-- Center mark -->
+        <circle cx="24" cy="26" r="3" fill="#4af0b0"/>
+        <!-- Crosshair vertical -->
+        <line x1="24" y1="16" x2="24" y2="21" stroke="#4af0b0" stroke-width="1"/>
+        <line x1="24" y1="31" x2="24" y2="36" stroke="#4af0b0" stroke-width="1"/>
+        <!-- Crosshair horizontal -->
+        <line x1="14" y1="26" x2="19" y2="26" stroke="#4af0b0" stroke-width="1"/>
+        <line x1="29" y1="26" x2="34" y2="26" stroke="#4af0b0" stroke-width="1"/>
+      </svg>
+      <span class="brand__name">Darksky Ops</span>
+    </a>
+    <span class="header-tag" aria-hidden="true">Clearance Required</span>
+  </header>
+
+  <main>
+
+    <!-- ══════════════════════════════════
+         HERO
+    ══════════════════════════════════ -->
+    <section id="hero" aria-labelledby="hero-headline">
+      <div class="hero-grid" aria-hidden="true"></div>
+      <div class="container">
+        <div class="hero-content">
+          <div class="hero-eyebrow" aria-hidden="true">Operational Security · Est. 2019</div>
+          <h1 class="hero-headline" id="hero-headline">
+            What you can't<br/>
+            see <em>controls</em><br/>
+            everything.
+          </h1>
+          <p class="hero-subtext">
+            We operate in the gap between what attackers know and what they don't.
+            Penetration testing, infrastructure hardening, and classified-grade
+            security operations — for institutions that cannot afford a second chance.
+          </p>
+          <div class="hero-cta">
+            <a href="#contact" class="btn-primary">
+              Initiate Contact
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2 7H12M12 7L8 3M12 7L8 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/>
+              </svg>
+            </a>
+            <a href="#services" class="btn-ghost">View Operations</a>
+          </div>
+        </div>
+      </div>
+      <div class="hero-status" aria-hidden="true">
+        <div class="status-dot"></div>
+        Systems Active
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ══════════════════════════════════
+         MISSION
+    ══════════════════════════════════ -->
+    <section id="mission" aria-labelledby="mission-heading">
+      <div class="container">
+        <span class="section-label reveal">01 / Mission</span>
+        <div class="mission-layout">
+          <div>
+            <h2 class="mission-statement reveal" data-delay="1" id="mission-heading">
+              We don't sell<br/>
+              <em>peace of mind.</em><br/>
+              We eliminate the<br/>
+              need for it.
+            </h2>
+          </div>
+          <ul class="mission-principles" aria-label="Core principles">
+            <li class="reveal" data-delay="2">
+              <div class="principle-title">Silence Over Signal</div>
+              <p class="principle-body">Our engagements leave no trace in your systems beyond the report. No residual footprint. No escalating retainer.</p>
+            </li>
+            <li class="reveal" data-delay="3">
+              <div class="principle-title">Threat-First Thinking</div>
+              <p class="principle-body">We map attack surfaces the way adversaries do — before they find them. Every assessment assumes breach is already in progress.</p>
+            </li>
+            <li class="reveal" data-delay="4">
+              <div class="principle-title">Deliverables, Not Decks</div>
+              <p class="principle-body">Reports are classified-format, actionable within 48 hours. No vendor pitch embedded. No upsell. Just findings and remediation paths.</p>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ══════════════════════════════════
+         SERVICES
+    ══════════════════════════════════ -->
+    <section id="services" aria-labelledby="services-heading">
+      <div class="container--wide">
+        <div class="services-header">
+          <div>
+            <span class="section-label reveal">02 / Operations</span>
+            <h2 class="services-title reveal" data-delay="1" id="services-heading">
+              Three disciplines.<br/>No overlap.
+            </h2>
+          </div>
+          <p class="services-note reveal" data-delay="2">
+            Each operation is scoped, contained, and reported to a single authorized contact. No third-party subcontracting.
+          </p>
+        </div>
+
+        <div class="services-grid" role="list">
+
+          <!-- Service 1 -->
+          <article class="service-card reveal" data-delay="1" role="listitem">
+            <div class="service-index" aria-hidden="true">OPS-01</div>
+            <svg class="service-icon" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+              <circle cx="20" cy="20" r="10" stroke="currentColor" stroke-width="1"/>
+              <circle cx="20" cy="20" r="17" stroke="currentColor" stroke-width="0.75" opacity="0.4"/>
+              <path d="M20 10V13M20 27V30M10 20H13M27 20H30" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+              <circle cx="20" cy="20" r="2.5" fill="currentColor"/>
+            </svg>
+            <h3 class="service-name">Network Penetration Testing</h3>
+            <p class="service-desc">
+              Full-spectrum adversarial simulation against your network perimeter, internal segments, and cloud boundaries. Red-team methodology adapted from nation-state TTPs. We find what automated scanners cannot.
+            </p>
+            <div class="service-tags" aria-label="Scope tags">
+              <span class="tag">External Perimeter</span>
+              <span class="tag">Internal Pivoting</span>
+              <span class="tag">Zero-Day Surface</span>
+              <span class="tag">Cloud Boundaries</span>
+            </div>
+          </article>
+
+          <!-- Service 2 -->
+          <article class="service-card reveal" data-delay="2" role="listitem">
+            <div class="service-index" aria-hidden="true">OPS-02</div>
+            <svg class="service-icon" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+              <rect x="5" y="12" width="30" height="18" rx="1" stroke="currentColor" stroke-width="1"/>
+              <path d="M5 18H35" stroke="currentColor" stroke-width="0.75" opacity="0.4"/>
+              <path d="M13 24H27" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+              <path d="M13 27H20" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+              <path d="M20 5V12M16 8L20 5L24 8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+            <h3 class="service-name">Infrastructure Hardening</h3>
+            <p class="service-desc">
+              Systematic elimination of attack surface across physical, virtual, and hybrid environments. Firewall re-architecture, identity segmentation, protocol enforcement. We rebuild what should not have been built the first time.
+            </p>
+            <div class="service-tags" aria-label="Scope tags">
+              <span class="tag">Firewall Architecture</span>
+              <span class="tag">Identity Segmentation</span>
+              <span class="tag">Zero Trust Posture</span>
+              <span class="tag">Hybrid Environments</span>
+            </div>
+          </article>
+
+          <!-- Service 3 -->
+          <article class="service-card reveal" data-delay="3" role="listitem">
+            <div class="service-index" aria-hidden="true">OPS-03</div>
+            <svg class="service-icon" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+              <path d="M20 5L33 12V21C33 27.5 27.5 33.5 20 36C12.5 33.5 7 27.5 7 21V12L20 5Z" stroke="currentColor" stroke-width="1"/>
+              <path d="M20 13L26 16.5V21.5C26 24.8 23.3 27.8 20 29C16.7 27.8 14 24.8 14 21.5V16.5L20 13Z" stroke="currentColor" stroke-width="0.75" opacity="0.5"/>
+              <circle cx="20" cy="21" r="2.5" fill="currentColor"/>
+            </svg>
+            <h3 class="service-name">Security Operations Support</h3>
+            <p class="service-desc">
+              Classified-level advisory engagements for government bodies, critical infrastructure operators, and high-value private entities. Threat intelligence integration, incident response posture, and pre-breach protocol design.
+            </p>
+            <div class="service-tags" aria-label="Scope tags">
+              <span class="tag">Gov / Critical Infra</span>
+              <span class="tag">Threat Intel</span>
+              <span class="tag">IR Posture</span>
+              <span class="tag">Classified Engagements</span>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════
+         CLEARANCE BAR
+    ══════════════════════════════════ -->
+    <div class="clearance-bar" aria-label="Operations statistics">
+      <div class="container">
+        <div class="clearance-inner">
+          <div class="clearance-stat reveal">
+            <div class="clearance-number">340<span>+</span></div>
+            <div class="clearance-label">Engagements Completed</div>
+          </div>
+          <div class="clearance-divider" aria-hidden="true"></div>
+          <div class="clearance-stat reveal" data-delay="1">
+            <div class="clearance-number">0</div>
+            <div class="clearance-label">Client Breaches Post-Engagement</div>
+          </div>
+          <div class="clearance-divider" aria-hidden="true"></div>
+          <div class="clearance-stat reveal" data-delay="2">
+            <div class="clearance-number">48<span>h</span></div>
+            <div class="clearance-label">Report Delivery SLA</div>
+          </div>
+          <div class="clearance-divider" aria-hidden="true"></div>
+          <div class="clearance-stat reveal" data-delay="3">
+            <div class="clearance-number">100<span>%</span></div>
+            <div class="clearance-label">NDA-Bound Operations</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         CONTACT
+    ══════════════════════════════════ -->
+    <section id="contact" aria-labelledby="contact-heading">
+      <div class="container">
+        <div class="contact-eyebrow reveal" aria-hidden="true">03 / Contact</div>
+        <h2 class="contact-headline reveal" data-delay="1" id="contact-heading">
+          If you're here,<br/>you already know<br/>what you need.
+        </h2>
+        <p class="contact-sub reveal" data-delay="2">
+          First contact is encrypted. Responses are signed. Expect a reply within one business day — or a confirmation that we cannot engage.
+        </p>
+        <a href="mailto:contact@darkskyops.com" class="contact-email reveal" data-delay="3">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect x="1" y="3" width="14" height="10" rx="1" stroke="currentColor" stroke-width="1"/>
+            <path d="M1 5L8 9.5L15 5" stroke="currentColor" stroke-width="1"/>
+          </svg>
+          contact@darkskyops.com
+        </a>
+
+        <div class="contact-protocol reveal" data-delay="4" role="note" aria-label="Security protocol notice">
+          <svg class="protocol-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 2L14 5V9C14 12 11.5 14.5 8 15.5C4.5 14.5 2 12 2 9V5L8 2Z" stroke="currentColor" stroke-width="1"/>
+            <circle cx="8" cy="9" r="1.5" fill="currentColor"/>
+            <line x1="8" y1="6" x2="8" y2="7.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+          </svg>
+          <span class="protocol-text">PGP Key available on request · No unsolicited proposals · NDAs precede all scoping</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ══════════════════════════════════
+       FOOTER
+  ══════════════════════════════════ -->
+  <footer role="contentinfo">
+    <div class="footer-brand">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M24 4L42 14V34L24 44L6 34V14L24 4Z" stroke="#4af0b0" stroke-width="1" fill="none" opacity="0.3"/>
+        <path d="M24 12L36 19V33L24 40L12 33V19L24 12Z" stroke="#4af0b0" stroke-width="1" fill="none" opacity="0.6"/>
+        <circle cx="24" cy="26" r="3" fill="#4af0b0"/>
+      </svg>
+      <span class="footer-brand-name">Darksky Ops</span>
+    </div>
+    <p class="footer-copy">© 2025 Darksky Ops. All engagements confidential.</p>
+    <p class="footer-legal">No affiliation with government entities.<br/>All marks reserved.</p>
+  </footer>
+
+  <!-- ══════════════════════════════════
+       MINIMAL JS
+  ══════════════════════════════════ -->
+  <script>
+    // Custom cursor
+    const cursor = document.getElementById('cursor');
+    const ring   = document.getElementById('cursor-ring');
+    let mx = 0, my = 0, rx = 0, ry = 0;
+
+    document.addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      cursor.style.left = mx + 'px';
+      cursor.style.top  = my + 'px';
+    });
+
+    // Smooth ring follow
+    function animateRing() {
+      rx += (mx - rx) * 0.12;
+      ry += (my - ry) * 0.12;
+      ring.style.left = rx + 'px';
+      ring.style.top  = ry + 'px';
+      requestAnimationFrame(animateRing);
+    }
+    animateRing();
+
+    // Ring enlarge on interactive elements
+    document.querySelectorAll('a, button').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        ring.style.width  = '52px';
+        ring.style.height = '52px';
+        ring.style.opacity = '0.6';
+      });
+      el.addEventListener('mouseleave', () => {
+        ring.style.width  = '32px';
+        ring.style.height = '32px';
+        ring.style.opacity = '1';
+      });
+    });
+
+    // Header scroll class
+    const header = document.getElementById('site-header');
+    window.addEventListener('scroll', () => {
+      header.classList.toggle('scrolled', window.scrollY > 60);
+    }, { passive: true });
+
+    // Intersection observer for reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+    reveals.forEach(el => io.observe(el));
+  </script>
+
+</body>
+</html>
